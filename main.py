@@ -18,7 +18,7 @@ class MainWindow(QWidget):
         self.setGeometry(200, 200, 300, 400)
         self.setWindowTitle("Image Transformation")
         self.initUI()
-        self.img = cv2.imread("sample.png")
+        self.image = cv2.imread("sample.png")
 
     def initUI(self):
         button = [None] * 4
@@ -31,7 +31,7 @@ class MainWindow(QWidget):
         button[3] = QPushButton("4. Shearing", self)
         button[3].clicked.connect(self.push_shearing_button)
 
-        self.resize_txt = QLineEdit("256,256")
+        self.resize_txt = QLineEdit("(256,256)")
         self.xtrans_txt = QLineEdit("0")
         self.ytrans_txt = QLineEdit("60")
         self.angle_txt = QLineEdit("10")
@@ -71,21 +71,65 @@ class MainWindow(QWidget):
     # image processing funtions
     # ============================================================================
 
+    def resize(self, img):
+        img_size = ast.literal_eval(self.resize_txt.text())
+        return cv2.resize(img, tuple(img_size))
+
+    def translation(self, img):
+        tx = int(self.xtrans_txt.text())
+        ty = int(self.ytrans_txt.text())
+        width = img.shape[1] + tx
+        height = img.shape[0] + ty
+
+        # translation matrix
+        M = np.float32([[1, 0, tx], [0, 1, ty]])
+        return cv2.warpAffine(img, M, (width, height))
+
+    def rotation(self, img):
+        windowsize = ast.literal_eval(self.windowsize_txt.text())
+        imgsize = ast.literal_eval(self.resize_txt.text())
+        tx = int(self.xtrans_txt.text())
+        ty = int(self.ytrans_txt.text())
+        center = (imgsize[0] / 2 + tx, imgsize[1] / 2 + ty)
+        angle = int(self.angle_txt.text())
+        scale = float(self.scale_txt.text())
+
+        M = cv2.getRotationMatrix2D(center, angle, scale)
+        return cv2.warpAffine(img, M, tuple(windowsize))
+
+    def affine_transformation(self, img):
+        imgsize = (img.shape[1], img.shape[0])
+
+        old_loc = ast.literal_eval(self.orig_pts_txt.text())
+        old_loc = np.float32(old_loc)
+        new_loc = ast.literal_eval(self.shearing_pts_txt.text())
+        new_loc = np.float32(new_loc)
+        M = cv2.getAffineTransform(old_loc, new_loc)
+        return cv2.warpAffine(img, M, imgsize)
+
     # ============================================================================
     # button handling funtions
     # ============================================================================
 
     def push_resize_button(self):
-        pass
+        img = self.image.copy()
+        cv2.imshow("Resize", self.resize(img))
 
     def push_translation_button(self):
-        pass
+        img = self.image.copy()
+        img = self.resize(img)
+        cv2.imshow("Translation", self.translation(img))
 
     def push_rotation_button(self):
-        pass
+        img = self.image.copy()
+        img = self.resize(img)
+        cv2.imshow("Rotation, Scaling", self.rotation(img))
 
     def push_shearing_button(self):
-        pass
+        img = self.image.copy()
+        img = self.resize(img)
+        img = self.rotation(img)
+        cv2.imshow("Shearing", self.affine_transformation(img))
 
 
 def main():
